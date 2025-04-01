@@ -1,0 +1,5 @@
+figures/*
+Data/*
+kan_models/*
+processed_gene_data/*
+__pycache__/*
