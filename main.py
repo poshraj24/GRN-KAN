@@ -45,8 +45,8 @@ if __name__ == "__main__":
         data_dir=data_dir,
         output_dir=output_dir,
         batch_size=32,
-        max_models=4,
-        epochs=5,
+        max_models=100,
+        epochs=2,
         patience=5,
         lr=0.001,
     )

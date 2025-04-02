@@ -33,7 +33,15 @@ class GeneDataset(Dataset):
 def r2_score(y_true, y_pred):
     total_sum_squares = torch.sum((y_true - torch.mean(y_true)) ** 2)
     residual_sum_squares = torch.sum((y_true - y_pred) ** 2)
-    return 1 - (residual_sum_squares / (total_sum_squares))
+    # Add a small epsilon to avoid division by zero
+    epsilon = 1e-10
+    # Check if total_sum_squares is effectively zero
+    if total_sum_squares < epsilon:
+        # If there's no variance in the target, R² is not meaningful
+        # By convention, return 0 or some other indicator
+        return torch.tensor(0.0, device=y_true.device)
+
+    return 1 - (residual_sum_squares / (total_sum_squares + epsilon))
 
 
 def rmse(y_true, y_pred):
@@ -91,15 +99,47 @@ def prepare_data(X, y, batch_size=32, seed=42):
 
 
 # Helper functions for saving model visualizations and formulas
-def log_symbolic_formula(formula_tuple, log_file):
-    """Log symbolic formula to training log file."""
+def log_symbolic_formula(formula_tuple, log_file, gene_names):
+    """
+    Log symbolic formula to training log file with actual gene names instead of X_1, X_2, etc.
+
+    Args:
+        formula_tuple: The symbolic formula from model.symbolic_formula()
+        log_file: Path to the log file
+        gene_names: List of gene names corresponding to input features
+    """
     with open(log_file, "a") as f:
         f.write("\n" + "=" * 50 + "\n")
-        f.write("Symbolic Formula:\n")
+        f.write("Symbolic Formula with Gene Names:\n")
         f.write("-" * 20 + "\n")
-        # Convert tuple elements to string and join them
+
+        # Convert tuple elements to string
         formula_str = "\n".join(str(item) for item in formula_tuple)
-        f.write(formula_str + "\n")
+
+        # Replace X_i patterns with actual gene names
+        # This regex matches X_1, X_2, etc. (case insensitive)
+        import re
+
+        replaced_formula = formula_str
+        pattern = re.compile(r"[xX]_(\d+)")
+
+        def replace_with_gene(match):
+            idx = int(match.group(1)) - 1  # Convert to 0-based index
+            if 0 <= idx < len(gene_names):
+                return f"{gene_names[idx]}"
+            else:
+                return match.group(0)  # Keep original if index out of range
+
+        replaced_formula = pattern.sub(replace_with_gene, formula_str)
+
+        f.write(replaced_formula + "\n")
+        f.write("=" * 50 + "\n\n")
+
+        # Also save the mapping for reference
+        f.write("Variable Mapping:\n")
+        for i, gene in enumerate(gene_names):
+            if i < len(gene_names):
+                f.write(f"X_{i+1} = {gene}\n")
         f.write("=" * 50 + "\n\n")
 
 
@@ -428,14 +468,35 @@ def train_single_model(
         # 1. Generate symbolic formula
         log("Generating symbolic formula...")
         try:
-            model.auto_symbolic()
+
+            model.auto_symbolic(
+                a_range=(-20, 20),  # Wider parameter search range
+                b_range=(-20, 20),
+                weight_simple=0.6,  # Balance between simplicity and accuracy
+                r2_threshold=0.3,  # Only use edges with reasonable fit
+                verbose=2,  # More debugging output
+            )
             symbolic_formula = model.symbolic_formula()
-            log_symbolic_formula(symbolic_formula, log_file)
+            log_symbolic_formula(symbolic_formula, log_file, related_genes)
 
             # Save formula to a separate file for easier access
             formula_file = os.path.join(gene_dir, "symbolic_formula.txt")
             with open(formula_file, "w") as f:
-                f.write("\n".join(str(item) for item in symbolic_formula))
+                formula_str = "\n".join(str(item) for item in symbolic_formula)
+                # Replace X_i patterns with actual gene names
+                import re
+
+                pattern = re.compile(r"[xX]_(\d+)")
+
+                def replace_with_gene(match):
+                    idx = int(match.group(1)) - 1  # Convert to 0-based index
+                    if 0 <= idx < len(related_genes):
+                        return f"{related_genes[idx]}"
+                    else:
+                        return match.group(0)
+
+                replaced_formula = pattern.sub(replace_with_gene, formula_str)
+                f.write(replaced_formula)
         except Exception as e:
             log(f"Error generating symbolic formula: {str(e)}")
 
@@ -544,12 +605,18 @@ def train_kan_models_parallel(
     if num_gpus > 0:
         gpu_memory = []
         for i in range(num_gpus):
-            mem = torch.cuda.get_device_properties(i).total_memory / 1e9
-            free_mem = torch.cuda.memory_reserved(i) / 1e9
+            # Set current device before querying memory
+            torch.cuda.set_device(i)
+            # Get free and total memory directly
+            free, total = torch.cuda.mem_get_info()
+            free_gb = free / 1e9
+            total_gb = total / 1e9
+
             print(
-                f"GPU {i}: Total Memory: {mem:.2f} GB, Free Memory: {free_mem:.2f} GB"
+                f"GPU {i}: Total Memory: {total_gb:.2f} GB, "
+                f"Free Memory: {free_gb:.2f} GB"
             )
-            gpu_memory.append(mem)
+            gpu_memory.append(total_gb)
 
     # Progress tracking
     total_genes = len(gene_list)
