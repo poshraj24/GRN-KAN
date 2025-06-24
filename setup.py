@@ -86,20 +86,20 @@ hpc_requirements = [
 
 setup(
     # Basic package information
-    name="kan-grn",
+    name="kan_grn",
     version=version,
     # Author information
-    author="Your Name",
-    author_email="your.email@example.com",
-    maintainer="Your Name",
-    maintainer_email="your.email@example.com",
+    author="Posh Raj Dahal",
+    author_email="dahal.poshraj24@gmail.com",
+    maintainer="Posh Raj Dahal",
+    maintainer_email="dahal.poshraj24@gmail.com",
     # Package description
     description="Gene Regulatory Network inference using Kolmogorov-Arnold Networks",
     long_description=long_description,
     long_description_content_type="text/markdown",
     # URLs
-    url="https://github.com/yourusername/kan-grn",
-    download_url="https://github.com/yourusername/kan-grn/archive/v{}.tar.gz".format(
+    url="https://github.com/poshraj24/GRN-KAN",
+    download_url="https://github.com/poshraj24/GRN-KAN/archive/v{}.tar.gz".format(
         version
     ),
     # Package discovery
@@ -194,12 +194,12 @@ setup(
     ],
     # Project URLs
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/kan-grn/issues",
-        "Source": "https://github.com/yourusername/kan-grn",
+        "Bug Reports": "https://github.com/poshraj24/GRN-KAN/issues",
+        "Source": "https://github.com/poshraj24/GRN-KAN",
         "Documentation": "https://kan-grn.readthedocs.io/",
-        "Changelog": "https://github.com/yourusername/kan-grn/blob/main/CHANGELOG.md",
-        "Examples": "https://github.com/yourusername/kan-grn/tree/main/examples",
-        "CI/CD": "https://github.com/yourusername/kan-grn/actions",
+        "Changelog": "https://github.com/poshraj24/GRN-KAN/blob/main/CHANGELOG.md",
+        "Examples": "https://github.com/poshraj24/GRN-KAN/tree/main/examples",
+        "CI/CD": "https://github.com/poshraj24/GRN-KAN/actions",
     },
     # Additional metadata
     license="MIT",
@@ -227,9 +227,9 @@ Quick Start:
 3. Get help: kan-grn --help
 
 For examples and documentation, visit:
-https://github.com/yourusername/kan-grn
+https://github.com/poshraj24/GRN-KAN
 
 If you encounter any issues, please report them at:
-https://github.com/yourusername/kan-grn/issues
+https://github.com/poshraj24/GRN-KAN/issues
 """
 )
