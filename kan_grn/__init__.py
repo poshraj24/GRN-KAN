@@ -32,27 +32,57 @@ try:
     from .core.data_manager import HPCSharedGeneDataManager
     from .core.network_builder import GeneRegulatoryNetworkBuilder
     from .core.trainer import KANTrainer
+
+    # If imports succeed, define __all__
+    __all__ = [
+        "KANGRNPipeline",
+        "PipelineConfig",
+        "ModelConfig",
+        "TrainingConfig",
+        "NetworkConfig",
+        "HPCSharedGeneDataManager",
+        "GeneRegulatoryNetworkBuilder",
+        "KANTrainer",
+        "__version__",
+        "__author__",
+        "__email__",
+    ]
+
 except ImportError as e:
     # Handle import errors gracefully during package installation
     import warnings
 
     warnings.warn(f"Some modules could not be imported: {e}", ImportWarning)
 
-# Define what gets imported with "from kan_grn import *"
-__all__ = [
-    # Main pipeline
-    "KANGRNPipeline",
-    # Configuration classes
-    "PipelineConfig",
-    "ModelConfig",
-    "TrainingConfig",
-    "NetworkConfig",
-    # Core classes
-    "HPCSharedGeneDataManager",
-    "GeneRegulatoryNetworkBuilder",
-    "KANTrainer",
-    # Package info
-    "__version__",
-    "__author__",
-    "__email__",
-]
+    # Import classes individually to find the specific problem
+    try:
+        from .pipeline.main_pipeline import KANGRNPipeline
+    except ImportError as e2:
+        print(f"Failed to import KANGRNPipeline: {e2}")
+        KANGRNPipeline = None
+
+    try:
+        from .pipeline.config import (
+            PipelineConfig,
+            ModelConfig,
+            TrainingConfig,
+            NetworkConfig,
+        )
+    except ImportError as e2:
+        print(f"Failed to import config classes: {e2}")
+        PipelineConfig = ModelConfig = TrainingConfig = NetworkConfig = None
+
+    try:
+        from .core.data_manager import HPCSharedGeneDataManager
+    except ImportError as e2:
+        print(f"Failed to import HPCSharedGeneDataManager: {e2}")
+        HPCSharedGeneDataManager = None
+
+    try:
+        from .core.trainer import KANTrainer
+    except ImportError as e2:
+        print(f"Failed to import KANTrainer: {e2}")
+        KANTrainer = None
+
+    # Minimal __all__ for failed imports
+    __all__ = ["__version__", "__author__", "__email__"]
