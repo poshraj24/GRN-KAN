@@ -17,13 +17,6 @@ from .config import (
     NetworkConfig,
 )
 
-# Optional: Import validation functions if they exist
-try:
-    from .validation import validate_expression_file, validate_network_file
-
-    validation_available = True
-except ImportError:
-    validation_available = False
 
 __all__ = [
     "KANGRNPipeline",
@@ -32,6 +25,3 @@ __all__ = [
     "TrainingConfig",
     "NetworkConfig",
 ]
-
-if validation_available:
-    __all__.extend(["validate_expression_file", "validate_network_file"])
