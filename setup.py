@@ -30,63 +30,31 @@ requirements_file = package_dir / "requirements.txt"
 if requirements_file.exists():
     with open(requirements_file, "r", encoding="utf-8") as fh:
         requirements = [
-            line.strip() for line in fh if line.strip() and not line.startswith("#")
+            line.strip()
+            for line in fh
+            if line.strip() and not line.startswith("#") and ";" not in line
         ]
 else:
-    # Fallback requirements if file doesn't exist
+    # Fallback requirements matching your current setup
     requirements = [
+        "numpy>=1.21.0,<3.0.0",
         "torch>=1.9.0",
-        "numpy>=1.19.0",
-        "pandas>=1.2.0",
+        "pandas>=1.3.0",
         "scipy>=1.6.0",
         "scikit-learn>=0.24.0",
-        "scanpy>=1.7.0",
+        "scanpy>=1.9.0",
         "tqdm>=4.50.0",
         "psutil>=5.7.0",
         "h5py>=3.1.0",
-        "anndata>=0.7.0",
+        "anndata>=0.8.0",
     ]
 
 # Read version from package
-version_file = package_dir / "kan_grn" / "__init__.py"
-version = "1.0.0"  # Default version
-if version_file.exists():
-    with open(version_file, "r", encoding="utf-8") as fh:
-        for line in fh:
-            if line.startswith("__version__"):
-                version = line.split("=")[1].strip().strip('"').strip("'")
-                break
-
-# Development requirements
-dev_requirements = [
-    "pytest>=6.0",
-    "pytest-cov>=2.0",
-    "black>=21.0",
-    "flake8>=3.8",
-    "mypy>=0.812",
-    "sphinx>=4.0",
-    "sphinx-rtd-theme>=0.5",
-    "jupyter>=1.0.0",
-    "matplotlib>=3.3.0",
-    "seaborn>=0.11.0",
-]
-
-# GPU requirements (CUDA-enabled PyTorch)
-gpu_requirements = [
-    "torch>=1.9.0+cu111",
-    "torchvision>=0.10.0+cu111",
-]
-
-# HPC requirements
-hpc_requirements = [
-    "mpi4py>=3.0.0",
-    "dask[distributed]>=2021.0.0",
-    "joblib>=1.0.0",
-]
+version = "1.0.1"  # Updated version
 
 setup(
     # Basic package information
-    name="kan_grn",
+    name="kan-grn",
     version=version,
     # Author information
     author="Posh Raj Dahal",
@@ -99,9 +67,7 @@ setup(
     long_description_content_type="text/markdown",
     # URLs
     url="https://github.com/poshraj24/GRN-KAN",
-    download_url="https://github.com/poshraj24/GRN-KAN/archive/v{}.tar.gz".format(
-        version
-    ),
+    download_url="https://github.com/poshraj24/GRN-KAN/archive/v1.0.1.tar.gz",
     # Package discovery
     packages=find_packages(exclude=["tests", "tests.*", "examples", "docs"]),
     # Package data
@@ -110,24 +76,23 @@ setup(
         "kan_grn": [
             "data/*.json",
             "data/*.txt",
-            "config/*.json",
-            "examples/*.py",
         ],
     },
     # Requirements
     python_requires=">=3.8",
     install_requires=requirements,
-    # Optional requirements
+    # Optional requirements - Updated for PyTorch 2.5.0
     extras_require={
-        "dev": dev_requirements,
-        "gpu": gpu_requirements,
-        "hpc": hpc_requirements,
-        "all": dev_requirements + hpc_requirements,
-        "docs": [
-            "sphinx>=4.0",
-            "sphinx-rtd-theme>=0.5",
-            "sphinx-autodoc-typehints>=1.12",
-            "myst-parser>=0.15",
+        "dev": [
+            "pytest>=6.0",
+            "pytest-cov>=2.0",
+            "black>=21.0",
+            "flake8>=3.8",
+            "jupyter>=1.0.0",
+        ],
+        "gpu": [
+            "torch>=2.5.0",
+            "torchvision>=0.20.0",
         ],
         "visualization": [
             "matplotlib>=3.3.0",
@@ -140,44 +105,22 @@ setup(
     entry_points={
         "console_scripts": [
             "kan-grn=kan_grn.cli.commands:main",
-            "kan-grn-train=kan_grn.cli.commands:train_models",
-            "kan-grn-build-network=kan_grn.cli.commands:build_network",
-            "kan-grn-config=kan_grn.cli.commands:create_config",
         ],
     },
     # Classification
     classifiers=[
-        # Development Status
         "Development Status :: 4 - Beta",
-        # Intended Audience
         "Intended Audience :: Science/Research",
-        "Intended Audience :: Developers",
-        "Intended Audience :: Healthcare Industry",
-        # Topic
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
-        "Topic :: Scientific/Engineering :: Information Analysis",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        # License
-        "License :: OSI Approved :: MIT License",
-        # Programming Language
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3 :: Only",
-        # Operating System
         "Operating System :: OS Independent",
-        "Operating System :: POSIX :: Linux",
-        "Operating System :: Microsoft :: Windows",
-        "Operating System :: MacOS",
-        # Environment
-        "Environment :: Console",
-        "Environment :: GPU :: NVIDIA CUDA",
-        # Natural Language
-        "Natural Language :: English",
     ],
     # Keywords for easier discovery
     keywords=[
@@ -189,47 +132,14 @@ setup(
         "systems biology",
         "network inference",
         "symbolic regression",
-        "computational biology",
-        "genomics",
     ],
     # Project URLs
     project_urls={
         "Bug Reports": "https://github.com/poshraj24/GRN-KAN/issues",
         "Source": "https://github.com/poshraj24/GRN-KAN",
-        "Documentation": "https://kan-grn.readthedocs.io/",
-        "Changelog": "https://github.com/poshraj24/GRN-KAN/blob/main/CHANGELOG.md",
-        "Examples": "https://github.com/poshraj24/GRN-KAN/tree/main/examples",
-        "CI/CD": "https://github.com/poshraj24/GRN-KAN/actions",
+        "Documentation": "https://github.com/poshraj24/GRN-KAN/blob/main/README.md",
     },
     # Additional metadata
-    license="MIT",
-    platforms=["any"],
-    # Zip safe
+    license="GPL-3.0",
     zip_safe=False,
-    # Test suite
-    test_suite="tests",
-    tests_require=[
-        "pytest>=6.0",
-        "pytest-cov>=2.0",
-    ],
-    # Command test
-    cmdclass={},
-)
-
-# Post-installation message
-print(
-    """
-🎉 KAN-GRN installation completed!
-
-Quick Start:
-1. Create a config file: kan-grn create-config
-2. Run the pipeline: kan-grn run expression.h5ad network.tsv
-3. Get help: kan-grn --help
-
-For examples and documentation, visit:
-https://github.com/poshraj24/GRN-KAN
-
-If you encounter any issues, please report them at:
-https://github.com/poshraj24/GRN-KAN/issues
-"""
 )
