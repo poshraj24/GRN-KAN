@@ -157,10 +157,9 @@ class HPCSharedGeneDataManager:
         adata_filtered = adata[:, hvg_mask].copy()
         print(f"Filtered data shape: {adata_filtered.shape}")
 
-        # Convert sparse matrix to dense if needed - but only after filtering
+        # Convert sparse matrix to dense if needed
         if hasattr(adata_filtered.X, "tocsc"):
             # Using CSC format for efficient column slicing later
-            print("Converting filtered sparse matrix to dense...")
             expr_matrix = adata_filtered.X.tocsc().toarray()
             print(f"Converted sparse expression matrix to dense: {expr_matrix.shape}")
         else:
