@@ -8,8 +8,9 @@ import json
 import os
 from pathlib import Path
 
-from ..pipeline.main_pipeline import KANGRNPipeline
-from ..pipeline.config import PipelineConfig, ModelConfig, TrainingConfig, NetworkConfig
+# Remove top-level imports - make them lazy instead
+# from ..pipeline.main_pipeline import KANGRNPipeline
+# from ..pipeline.config import PipelineConfig, ModelConfig, TrainingConfig, NetworkConfig
 
 
 def create_parser():
@@ -173,6 +174,15 @@ def add_network_arguments(parser):
 
 def run_pipeline(args):
     """Run the complete pipeline"""
+    # Lazy import when actually needed
+    from ..pipeline.main_pipeline import KANGRNPipeline
+    from ..pipeline.config import (
+        PipelineConfig,
+        ModelConfig,
+        TrainingConfig,
+        NetworkConfig,
+    )
+
     if args.config:
         # Load from config file
         config = PipelineConfig.load_from_file(args.config)
@@ -214,6 +224,9 @@ def run_pipeline(args):
 
 def train_models(args):
     """Train models only"""
+    # Lazy import when actually needed
+    from ..pipeline.main_pipeline import KANGRNPipeline
+
     # Similar to run_pipeline but call train_models_only
     config = create_config_from_args(args)
     pipeline = KANGRNPipeline(config)
@@ -223,7 +236,9 @@ def train_models(args):
 
 def build_network(args):
     """Build network from trained models"""
+    # Lazy import when actually needed
     from ..core.network_builder import GeneRegulatoryNetworkBuilder
+    from ..pipeline.config import NetworkConfig
 
     network_config = NetworkConfig(
         filter_method=args.filter_method,
@@ -242,6 +257,9 @@ def build_network(args):
 
 def create_config(args):
     """Create configuration file template"""
+    # Lazy import when actually needed
+    from ..pipeline.config import PipelineConfig
+
     config = PipelineConfig(
         expression_file="path/to/expression_data.h5ad",
         network_file="path/to/network_file.tsv",
@@ -254,6 +272,14 @@ def create_config(args):
 
 def create_config_from_args(args):
     """Helper function to create config from CLI arguments"""
+    # Lazy import when actually needed
+    from ..pipeline.config import (
+        PipelineConfig,
+        ModelConfig,
+        TrainingConfig,
+        NetworkConfig,
+    )
+
     return PipelineConfig(
         expression_file=args.expression_file,
         network_file=args.network_file,
@@ -309,6 +335,9 @@ def main():
         sys.exit(1)
     except Exception as e:
         print(f"Error: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
         sys.exit(1)
 
 
