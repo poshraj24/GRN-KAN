@@ -7,37 +7,34 @@ name = "kan-grn"
 dynamic = ["version"]
 description = "Gene Regulatory Network inference using Kolmogorov-Arnold Networks"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = {text = "GPL-3.0"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Posh Raj Dahal", email = "dahal.poshraj24@gmail.com"}
 ]
-maintainers = [
-    {name = "Your Name", email = "your.email@example.com"}
-]
-keywords = ["gene regulatory networks", "machine learning", "bioinformatics", "kolmogorov arnold networks"]
+keywords = ["gene regulatory networks", "bioinformatics", "machine learning"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "Topic :: Scientific/Engineering :: Bio-Informatics",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3.12",
 ]
 requires-python = ">=3.8"
 dependencies = [
+    "numpy>=1.21.0,<3.0.0",
     "torch>=1.9.0",
-    "numpy>=1.19.0",
-    "pandas>=1.2.0",
+    "pandas>=1.3.0",
     "scipy>=1.6.0",
     "scikit-learn>=0.24.0",
-    "scanpy>=1.7.0",
+    "scanpy>=1.9.0",
     "tqdm>=4.50.0",
     "psutil>=5.7.0",
+    "h5py>=3.1.0",
+    "anndata>=0.8.0",
 ]
 
 [project.optional-dependencies]
@@ -46,54 +43,26 @@ dev = [
     "pytest-cov>=2.0",
     "black>=21.0",
     "flake8>=3.8",
-    "mypy>=0.812",
-    "sphinx>=4.0",
-    "sphinx-rtd-theme>=0.5",
+    "jupyter>=1.0.0",
 ]
 gpu = [
-    "torch>=1.9.0+cu111",
-    "torchvision>=0.10.0+cu111",
+    "torch>=2.5.0",
+    "torchvision>=0.20.0",
 ]
-hpc = [
-    "mpi4py>=3.0.0",
-    "dask[distributed]>=2021.0.0",
+viz = [
+    "matplotlib>=3.3.0",
+    "seaborn>=0.11.0",
+    "plotly>=5.0.0",
+    "networkx>=2.5",
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/kan-grn"
-Documentation = "https://kan-grn.readthedocs.io/"
-Repository = "https://github.com/yourusername/kan-grn.git"
-"Bug Tracker" = "https://github.com/yourusername/kan-grn/issues"
+Homepage = "https://github.com/poshraj24/GRN-KAN"
+Repository = "https://github.com/poshraj24/GRN-KAN.git"
+"Bug Tracker" = "https://github.com/poshraj24/GRN-KAN/issues"
 
 [project.scripts]
 kan-grn = "kan_grn.cli.commands:main"
-kan-grn-train = "kan_grn.cli.commands:train_models"
-kan-grn-build-network = "kan_grn.cli.commands:build_network"
 
 [tool.setuptools_scm]
 write_to = "kan_grn/_version.py"
-
-[tool.black]
-line-length = 88
-target-version = ['py38']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = "--cov=kan_grn --cov-report=html --cov-report=term-missing"
