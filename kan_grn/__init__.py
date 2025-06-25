@@ -20,69 +20,66 @@ __title__ = "kan-grn"
 __description__ = "Gene Regulatory Network inference using Kolmogorov-Arnold Networks"
 __url__ = "https://github.com/poshraj24/GRN-KAN"
 
-# Import main classes and functions for easy access
-try:
-    from .pipeline.main_pipeline import KANGRNPipeline
-    from .pipeline.config import (
-        PipelineConfig,
-        ModelConfig,
-        TrainingConfig,
-        NetworkConfig,
-    )
-    from .core.data_manager import HPCSharedGeneDataManager
-    from .core.network_builder import GeneRegulatoryNetworkBuilder
-    from .core.trainer import KANTrainer
 
-    # If imports succeed, define __all__
-    __all__ = [
-        "KANGRNPipeline",
-        "PipelineConfig",
-        "ModelConfig",
-        "TrainingConfig",
-        "NetworkConfig",
-        "HPCSharedGeneDataManager",
-        "GeneRegulatoryNetworkBuilder",
-        "KANTrainer",
-        "__version__",
-        "__author__",
-        "__email__",
-    ]
+# Lazy import implementation
+def __getattr__(name):
+    """Implement lazy imports to avoid dependency issues during installation."""
 
-except ImportError as e:
-    # Handle import errors gracefully during package installation
-    import warnings
-
-    warnings.warn(f"Some modules could not be imported: {e}", ImportWarning)
-
-    # Import classes individually to find the specific problem
-    try:
+    if name == "KANGRNPipeline":
         from .pipeline.main_pipeline import KANGRNPipeline
-    except ImportError as e2:
-        print(f"Failed to import KANGRNPipeline: {e2}")
-        KANGRNPipeline = None
 
-    try:
-        from .pipeline.config import (
-            PipelineConfig,
-            ModelConfig,
-            TrainingConfig,
-            NetworkConfig,
-        )
-    except ImportError as e2:
-        print(f"Failed to import config classes: {e2}")
-        PipelineConfig = ModelConfig = TrainingConfig = NetworkConfig = None
+        return KANGRNPipeline
 
-    try:
+    elif name == "PipelineConfig":
+        from .pipeline.config import PipelineConfig
+
+        return PipelineConfig
+
+    elif name == "ModelConfig":
+        from .pipeline.config import ModelConfig
+
+        return ModelConfig
+
+    elif name == "TrainingConfig":
+        from .pipeline.config import TrainingConfig
+
+        return TrainingConfig
+
+    elif name == "NetworkConfig":
+        from .pipeline.config import NetworkConfig
+
+        return NetworkConfig
+
+    elif name == "HPCSharedGeneDataManager":
         from .core.data_manager import HPCSharedGeneDataManager
-    except ImportError as e2:
-        print(f"Failed to import HPCSharedGeneDataManager: {e2}")
-        HPCSharedGeneDataManager = None
 
-    try:
+        return HPCSharedGeneDataManager
+
+    elif name == "GeneRegulatoryNetworkBuilder":
+        from .core.network_builder import GeneRegulatoryNetworkBuilder
+
+        return GeneRegulatoryNetworkBuilder
+
+    elif name == "KANTrainer":
         from .core.trainer import KANTrainer
-    except ImportError as e2:
-        print(f"Failed to import KANTrainer: {e2}")
-        KANTrainer = None
 
-    # Minimal __all__ for failed imports
-    __all__ = ["__version__", "__author__", "__email__"]
+        return KANTrainer
+
+    else:
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
+
+# Define what's available for import (used by help() and IDE autocomplete)
+__all__ = [
+    "KANGRNPipeline",
+    "PipelineConfig",
+    "ModelConfig",
+    "TrainingConfig",
+    "NetworkConfig",
+    "HPCSharedGeneDataManager",
+    "GeneRegulatoryNetworkBuilder",
+    "KANTrainer",
+    "__version__",
+    "__author__",
+    "__email__",
+]
