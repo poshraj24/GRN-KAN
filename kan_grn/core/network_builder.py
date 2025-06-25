@@ -43,15 +43,32 @@ class GeneRegulatoryNetworkBuilder:
             Dictionary containing network building results
         """
         if output_file is None:
-            output_file = os.path.join(
-                self.models_dir,
-                f"gene_regulatory_network_{self.config.filter_method}_{self._get_threshold()}.csv",
-            )
+            if self.config.filter_method == "zscore":
+                output_file = os.path.join(
+                    self.models_dir,
+                    f"gene_regulatory_network_zscore_{self.config.zscore_threshold}.csv",
+                )
+            elif self.config.filter_method == "importance":
+                output_file = os.path.join(
+                    self.models_dir,
+                    f"gene_regulatory_network_importance_{self.config.importance_threshold}.csv",
+                )
+            else:  # full network
+                output_file = os.path.join(
+                    self.models_dir,
+                    "gene_regulatory_network_full.csv",
+                )
 
-        self.logger.info(
-            f"Building network using {self.config.filter_method} filtering"
-        )
-        self.logger.info(f"Threshold: {self._get_threshold()}")
+        if self.config.filter_method == "zscore":
+            self.logger.info(
+                f"Building network using z-score filtering with threshold: {self.config.zscore_threshold}"
+            )
+        elif self.config.filter_method == "importance":
+            self.logger.info(
+                f"Building network using importance score filtering with threshold: {self.config.importance_threshold}"
+            )
+        else:
+            self.logger.info("Building full network (importance score > 0.000)")
 
         # Find all gene folders
         gene_folders = [
@@ -106,6 +123,10 @@ class GeneRegulatoryNetworkBuilder:
             self.logger.info(
                 f"Network building completed: {len(network_df)} relationships"
             )
+            self.logger.info(f"Network file created: {output_file}")
+
+            # Log summary statistics
+            self._log_summary_statistics(summary)
 
             # Save detailed results
             results_file = output_file.replace(".csv", "_results.json")
@@ -131,18 +152,20 @@ class GeneRegulatoryNetworkBuilder:
         # Read feature importance CSV
         df = pd.read_csv(csv_path)
 
-        # Find column names (handle variations)
-        gene_col = self._find_column(df, ["gene", "feature", "regulator"])
-        importance_col = self._find_column(df, ["importance", "score", "weight"])
+        # Find column names (handle variations) - more flexible approach
+        gene_col = self._find_column(df, ["gene"])
+        importance_col = self._find_column(df, ["importance", "score"])
 
         if gene_col is None or importance_col is None:
             raise ValueError(f"Could not find required columns in {csv_path}")
 
-        # Apply filtering
+        # Apply filtering based on method
         if self.config.filter_method == "zscore":
             filtered_df = self._apply_zscore_filtering(df, importance_col)
-        else:
+        elif self.config.filter_method == "importance":
             filtered_df = self._apply_importance_filtering(df, importance_col)
+        else:  # full network
+            filtered_df = self._apply_full_filtering(df, importance_col)
 
         # Create relationships
         relationships = []
@@ -152,7 +175,6 @@ class GeneRegulatoryNetworkBuilder:
                     "regulator_gene": row[gene_col],
                     "regulated_gene": regulated_gene,
                     "importance_score": float(row[importance_col]),
-                    "raw_score": float(row[importance_col]),
                 }
             )
 
@@ -162,8 +184,6 @@ class GeneRegulatoryNetworkBuilder:
         self, df: pd.DataFrame, possible_names: List[str]
     ) -> Optional[str]:
         """Find column by possible names (case insensitive)"""
-        df_columns_lower = [col.lower() for col in df.columns]
-
         for name in possible_names:
             for col in df.columns:
                 if name.lower() in col.lower():
@@ -194,6 +214,12 @@ class GeneRegulatoryNetworkBuilder:
         """Apply importance threshold filtering"""
         return df[df[importance_col] > self.config.importance_threshold]
 
+    def _apply_full_filtering(
+        self, df: pd.DataFrame, importance_col: str
+    ) -> pd.DataFrame:
+        """Apply minimal filtering for full network (importance > 0.000)"""
+        return df[df[importance_col] > 0.000]
+
     def _apply_post_filtering(self, network_df: pd.DataFrame) -> pd.DataFrame:
         """Apply additional post-processing filters"""
         # Remove self-loops
@@ -221,6 +247,10 @@ class GeneRegulatoryNetworkBuilder:
             "max_importance_score": float(network_df["importance_score"].max()),
             "avg_connections_per_gene": len(network_df)
             / network_df["regulated_gene"].nunique(),
+            "importance_score_range": f"{network_df['importance_score'].min():.6f} - {network_df['importance_score'].max():.6f}",
+            "top_relationships": network_df.nlargest(10, "importance_score")[
+                ["regulator_gene", "regulated_gene", "importance_score"]
+            ].to_dict("records"),
             "top_regulators": network_df["regulator_gene"]
             .value_counts()
             .head(10)
@@ -231,18 +261,41 @@ class GeneRegulatoryNetworkBuilder:
             .to_dict(),
         }
 
+    def _log_summary_statistics(self, summary: Dict[str, Any]) -> None:
+        """Log summary statistics"""
+        self.logger.info("=" * 60)
+        self.logger.info("NETWORK SUMMARY")
+        self.logger.info("=" * 60)
+        self.logger.info(f"Total relationships: {summary['total_relationships']}")
+        self.logger.info(f"Unique regulator genes: {summary['unique_regulators']}")
+        self.logger.info(f"Unique regulated genes: {summary['unique_regulated']}")
+        self.logger.info(
+            f"Average importance score: {summary['avg_importance_score']:.6f}"
+        )
+        self.logger.info(f"Importance score range: {summary['importance_score_range']}")
+
+        if summary["top_relationships"]:
+            self.logger.info("\nTop 10 relationships by importance score:")
+            for rel in summary["top_relationships"]:
+                self.logger.info(
+                    f"  {rel['regulator_gene']} -> {rel['regulated_gene']}: {rel['importance_score']:.6f}"
+                )
+
     def _get_threshold(self) -> float:
         """Get the current threshold value"""
         if self.config.filter_method == "zscore":
             return self.config.zscore_threshold
-        else:
+        elif self.config.filter_method == "importance":
             return self.config.importance_threshold
+        else:  # full
+            return 0.000
 
 
 def build_network_from_models(
     models_dir: str,
     filter_method: str = "zscore",
-    threshold: float = 1.0,
+    zscore_threshold: float = 2.0,
+    importance_threshold: float = 0.000,
     output_file: Optional[str] = None,
 ) -> str:
     """
@@ -250,21 +303,83 @@ def build_network_from_models(
 
     Args:
         models_dir: Directory containing trained models
-        filter_method: Filtering method ('zscore' or 'importance')
-        threshold: Threshold value for filtering
+        filter_method: Filtering method ('zscore', 'importance', or 'full')
+        zscore_threshold: Z-score threshold for z-score filtering (default: 2.0)
+        importance_threshold: Importance threshold for importance filtering (default: 0.000)
         output_file: Optional output file path
 
     Returns:
         Path to generated network file
     """
-    if filter_method == "zscore":
-        config = NetworkConfig(filter_method=filter_method, zscore_threshold=threshold)
-    else:
-        config = NetworkConfig(
-            filter_method=filter_method, importance_threshold=threshold
-        )
+    config = NetworkConfig(
+        filter_method=filter_method,
+        zscore_threshold=zscore_threshold,
+        importance_threshold=importance_threshold,
+    )
 
     builder = GeneRegulatoryNetworkBuilder(models_dir, config)
     results = builder.build_network(output_file)
 
     return results["network_file"]
+
+
+def create_full_network(models_dir: str, output_file: Optional[str] = None) -> str:
+    """
+    Convenience function to create a full network (importance > 0.000)
+
+    Args:
+        models_dir: Directory containing trained models
+        output_file: Optional output file path
+
+    Returns:
+        Path to generated network file
+    """
+    return build_network_from_models(
+        models_dir=models_dir, filter_method="full", output_file=output_file
+    )
+
+
+def create_zscore_network(
+    models_dir: str, zscore_threshold: float = 2.0, output_file: Optional[str] = None
+) -> str:
+    """
+    Convenience function to create a z-score filtered network
+
+    Args:
+        models_dir: Directory containing trained models
+        zscore_threshold: Z-score cutoff threshold (default: 2.0)
+        output_file: Optional output file path
+
+    Returns:
+        Path to generated network file
+    """
+    return build_network_from_models(
+        models_dir=models_dir,
+        filter_method="zscore",
+        zscore_threshold=zscore_threshold,
+        output_file=output_file,
+    )
+
+
+def create_importance_network(
+    models_dir: str,
+    importance_threshold: float = 0.000,
+    output_file: Optional[str] = None,
+) -> str:
+    """
+    Convenience function to create an importance threshold filtered network
+
+    Args:
+        models_dir: Directory containing trained models
+        importance_threshold: Minimum importance score threshold (default: 0.000)
+        output_file: Optional output file path
+
+    Returns:
+        Path to generated network file
+    """
+    return build_network_from_models(
+        models_dir=models_dir,
+        filter_method="importance",
+        importance_threshold=importance_threshold,
+        output_file=output_file,
+    )

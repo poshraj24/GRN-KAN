@@ -10,6 +10,14 @@ from collections import defaultdict
 import os
 import gc
 import time
+import warnings
+
+# Suppress the specific FutureWarning from anndata
+warnings.filterwarnings(
+    "ignore",
+    message="Importing read_csv from `anndata` is deprecated.*",
+    category=FutureWarning,
+)
 
 
 class HPCSharedGeneDataManager:
@@ -80,14 +88,34 @@ class HPCSharedGeneDataManager:
         """
         print(f"Identifying top {self.n_top_genes} highly variable genes...")
 
-        # Calculate variance for each gene
+        # Memory-efficient variance calculation for sparse matrices
         if hasattr(adata.X, "toarray"):
-            expr_array = adata.X.toarray()
-        else:
-            expr_array = adata.X
+            # For sparse matrices, calculate variance without converting entire matrix to dense
+            print("Computing variance efficiently for sparse matrix...")
+            n_genes = adata.X.shape[1]
+            gene_variances = np.zeros(n_genes)
 
-        # Calculate variance across samples for each gene
-        gene_variances = np.var(expr_array, axis=0)
+            # Convert to CSC format for efficient column access
+            if not hasattr(adata.X, "getcol"):
+                X_csc = adata.X.tocsc()
+            else:
+                X_csc = adata.X
+
+            # Calculate variance for each gene individually to save memory
+            for i in range(n_genes):
+                if i % 1000 == 0:
+                    print(f"Processing gene {i+1}/{n_genes}")
+
+                # Get expression values for gene i
+                gene_expr = X_csc[:, i].toarray().flatten()
+                gene_variances[i] = np.var(gene_expr)
+
+                # Clear memory
+                del gene_expr
+        else:
+            # For dense matrices
+            print("Computing variance for dense matrix...")
+            gene_variances = np.var(adata.X, axis=0)
 
         # Get indices of top variable genes
         top_indices = np.argsort(gene_variances)[-self.n_top_genes :]
@@ -99,6 +127,10 @@ class HPCSharedGeneDataManager:
         print(
             f"Variance range: {gene_variances[top_indices].min():.4f} - {gene_variances[top_indices].max():.4f}"
         )
+
+        # Clean up
+        del gene_variances
+        gc.collect()
 
         return hvg_genes
 
@@ -125,9 +157,10 @@ class HPCSharedGeneDataManager:
         adata_filtered = adata[:, hvg_mask].copy()
         print(f"Filtered data shape: {adata_filtered.shape}")
 
-        # Convert sparse matrix to dense if needed
+        # Convert sparse matrix to dense if needed - but only after filtering
         if hasattr(adata_filtered.X, "tocsc"):
             # Using CSC format for efficient column slicing later
+            print("Converting filtered sparse matrix to dense...")
             expr_matrix = adata_filtered.X.tocsc().toarray()
             print(f"Converted sparse expression matrix to dense: {expr_matrix.shape}")
         else:
@@ -201,7 +234,7 @@ class HPCSharedGeneDataManager:
 
     def get_data_for_gene(
         self, target_gene: str
-    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], List[str]]:
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], List[str], str]:
         """
         Get data for a specific target gene, creating GPU tensors on demand.
 
@@ -209,24 +242,26 @@ class HPCSharedGeneDataManager:
             target_gene: Name of the target gene
 
         Returns:
-            Tuple of (input tensor, target tensor, related genes list)
+            Tuple of (input tensor, target tensor, related genes list, target gene)
         """
         if not self.is_initialized:
             raise RuntimeError("Data manager not initialized. Call load_data() first.")
 
         if target_gene in self.gene_data_views:
-            return self.gene_data_views[target_gene]
+            cached_data = self.gene_data_views[target_gene]
+            # Return cached data with target gene name
+            return cached_data[0], cached_data[1], cached_data[2], target_gene
 
         # Check if target gene is in our HVG set
         if target_gene not in self.hvg_genes:
             print(f"Warning: {target_gene} is not in the highly variable genes set")
-            return None, None, []
+            return None, None, [], target_gene
 
         # Get related genes for this target
         related_genes = self.gene_network.get(target_gene, [])
         if not related_genes:
             print(f"Warning: No related genes found for {target_gene}")
-            return None, None, []
+            return None, None, [], target_gene
 
         # Get indices for this target and its related genes
         target_idx = self.gene_to_idx[target_gene]
@@ -241,14 +276,14 @@ class HPCSharedGeneDataManager:
                 :, target_idx
             ].squeeze()  # All samples, target gene expression
 
-            # Store in cache to avoid recreating views
+            # Store in cache to avoid recreating views (only store the 3 main values)
             self.gene_data_views[target_gene] = (X, y, related_genes)
 
             return X, y, related_genes, target_gene
 
         except Exception as e:
             print(f"Error creating data for gene {target_gene}: {e}")
-            return None, None, []
+            return None, None, [], target_gene
 
     def prefetch_gene_batch(self, gene_batch: List[str]) -> None:
         """
@@ -270,7 +305,7 @@ class HPCSharedGeneDataManager:
 
     def get_model_config(self, target_gene: str) -> Dict:
         """Get model configuration for a gene."""
-        X, y, _ = self.get_data_for_gene(target_gene)
+        X, y, _, _ = self.get_data_for_gene(target_gene)
         if X is None:
             return {}
 

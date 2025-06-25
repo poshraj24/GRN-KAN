@@ -61,16 +61,16 @@ class TrainingConfig:
 class NetworkConfig:
     """Configuration for network building"""
 
-    filter_method: str = "zscore"  # "zscore" or "importance"
-    zscore_threshold: float = 1.0
-    importance_threshold: float = 0.0
+    filter_method: str = "zscore"  # "zscore", "importance", or "full"
+    zscore_threshold: float = 2.0
+    importance_threshold: float = 0.000
     min_connections: int = 1
 
     def __post_init__(self):
         """Validate network configuration"""
-        if self.filter_method not in ["zscore", "importance"]:
-            raise ValueError("filter_method must be 'zscore' or 'importance'")
-        if self.zscore_threshold <= 0:
+        if self.filter_method not in ["zscore", "importance", "full"]:
+            raise ValueError("filter_method must be 'zscore', 'importance', or 'full'")
+        if self.zscore_threshold < 0:
             raise ValueError("zscore_threshold must be positive")
 
 
@@ -121,7 +121,7 @@ class PipelineConfig:
             model_config=model_config,
             training_config=training_config,
             network_config=network_config,
-            **config_dict
+            **config_dict,
         )
 
     def to_dict(self) -> Dict[str, Any]:
