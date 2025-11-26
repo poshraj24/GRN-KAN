@@ -35,6 +35,8 @@ dependencies = [
     "psutil>=5.7.0",
     "h5py>=3.1.0",
     "anndata>=0.8.0",
+    "pykan",
+    "pyyaml",
 ]
 
 [project.optional-dependencies]
