@@ -182,6 +182,8 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+API_token.txt
+
 # PyPI configuration file
 .pypirc
 >>>>>>> 1483912b013a0c4a2c053220dc09a16877422ffe
