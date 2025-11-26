@@ -500,7 +500,11 @@ def run_training_process(
         )
 
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.5, patience=5, min_lr=1e-7, verbose=False
+            optimizer,
+            mode="min",
+            factor=0.5,
+            patience=5,
+            min_lr=1e-7,  # verbose=False
         )
 
         criterion = torch.nn.MSELoss(reduction="mean")
